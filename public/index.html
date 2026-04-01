@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaluga Inventory System | User Tracking & Date Range</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f3f4f6; margin: 0; padding: 0; color: #1f2937; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 24px 20px; display: none; }
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 12px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: #1f2937;
+            font-weight: 700;
+            padding: 6px 0;
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .nav-links a:hover { border-bottom-color: #1e4620; color: #1e4620; }
+        .btn-group { display: flex; gap: 12px; flex-wrap: wrap; }
+        button { background: white; border: 1px solid #d1d5db; padding: 8px 18px; border-radius: 32px; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        button:hover { background-color: #eef2ff; border-color: #3b82f6; }
+        .btn-primary { background: #1e4620; border-color: #1e4620; color: white; }
+        .btn-primary:hover { background: #0f2e12; }
+        .btn-danger { background: #fee2e2; border-color: #f3b3b3; color: #b91c1c; }
+        .card { background: white; border-radius: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 32px; overflow: visible; }
+        .card-header { padding: 18px 24px 10px 24px; font-weight: 600; font-size: 1.2rem; border-bottom: 2px solid #eef2ff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; padding: 12px 12px; background-color: #f9fafb; font-weight: 600; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; background: white; z-index: 1; }
+        td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .badge { background: #e6f0ff; color: #1e3a8a; padding: 4px 10px; border-radius: 40px; font-size: 0.7rem; }
+        .form-card { background: white; border-radius: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 32px; padding: 20px 24px; }
+        .form-grid { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+        .form-field { flex: 1; min-width: 160px; }
+        .form-field label { display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-field input, .form-field select { width: 100%; padding: 10px 12px; border-radius: 14px; border: 1px solid #d1d5db; background: white; font-size: 0.85rem; }
+        .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 28px; padding: 24px; width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto; }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+        .chart-container { padding: 20px 24px; background: white; border-radius: 24px; margin-bottom: 32px; }
+        .chart-row { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 16px; }
+        .chart-box { flex: 1; min-width: 300px; background: #ffffff; border-radius: 20px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #edf2f7; }
+        .alert-summary { background: #fff5f5; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 16px; margin-bottom: 16px; }
+        .stock-warning { background-color: #fff0f0; }
+        .footer-note { font-size: 0.7rem; color: #6b7280; text-align: center; margin-top: 32px; }
+        .scrollable-table {
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: 20px;
+            position: relative;
+        }
+        .scrollable-table th { position: sticky; top: 0; background: #f9fafb; z-index: 10; }
+        .filter-bar { padding: 12px 24px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+        .time-filter { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 0; }
+        .login-container { max-width: 400px; margin: 100px auto; background: white; padding: 32px; border-radius: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        .login-container input { width: 100%; padding: 12px; margin: 12px 0; border-radius: 24px; border: 1px solid #ccc; }
+        .error-msg { color: #dc2626; margin-top: 8px; }
+    </style>
+</head>
+<body>
+<div id="loginPanel" class="login-container">
+    <h2>🔐 Inventory Access</h2>
+    <input type="text" id="usernameInput" placeholder="Username" autocomplete="off">
+    <input type="password" id="passwordInput" placeholder="Password">
+    <button id="loginBtn" class="btn-primary">Login</button>
+    <div id="loginError" class="error-msg"></div>
+</div>
+
+<div id="mainApp" class="container">
+    <!-- Navigation -->
+    <div class="navbar">
+        <div class="nav-links">
+            <a data-nav="products">📦 Products</a>
+            <a data-nav="inbound">🚚 Inbound</a>
+            <a data-nav="outbound">📤 Outbound</a>
+            <a data-nav="alerts">⚠️ Alerts</a>
+            <a data-nav="inventory">📊 Inventory</a>
+            <a data-nav="expiry">⏰ Expiry</a>
+            <a data-nav="charts">📈 Charts</a>
+            <a data-nav="ledger">📋 Ledger</a>
+        </div>
+        <div class="btn-group">
+            <button id="exportStockBtn">📎 Export Stock CSV</button>
+            <button id="resetBtn" class="btn-danger">⟳ Reset All Data</button>
+            <button id="cleanOldDataBtn" class="btn-danger">🧹 Clean Old Transactions</button>
+        </div>
+    </div>
+
+    <!-- Products Master -->
+    <div id="products" class="card">
+        <div class="card-header"><h2>📦 Products Master</h2><button id="openAddProductBtn" class="btn-primary">+ Add Product</button></div>
+        <div class="filter-bar">
+            <input type="text" id="productSearchCode" placeholder="🔍 Search by Product Code">
+            <input type="text" id="productSearchSupplier" placeholder="🔍 Search by Supplier">
+            <button id="clearProductFilter" class="btn-primary" style="padding:4px 12px;">Clear</button>
+        </div>
+        <div class="scrollable-table"><table id="productTable"><thead><tr><th>Code</th><th>Name</th><th>Supplier</th><th>Packaging</th><th>Unit Weight</th><th>Min Stock</th><th>Shelf Life</th><th>Actions</th></tr></thead><tbody id="productTbody"></tbody></table></div>
+    </div>
+
+    <!-- Inbound Form -->
+    <div id="inbound" class="form-card">
+        <div class="card-header" style="padding:0 0 12px 0;"><h2>🚚 Register Inbound</h2></div>
+        <div class="form-grid">
+            <div class="form-field"><label>Warehouse *</label><select id="inWhSelect"></select></div>
+            <div class="form-field"><label>Product *</label><select id="inProductSelect"></select></div>
+            <div class="form-field"><label>Client *</label><input type="text" id="inClient" placeholder="e.g., AGK"></div>
+            <div class="form-field"><label>Quantity *</label><input type="number" id="inQuantity" min="1" value="1"></div>
+            <div class="form-field" id="inWeightField" style="display:none;"><label>Total Weight (kg)</label><input type="number" id="inWeight" step="0.1" value="0"></div>
+            <div class="form-field"><label>Contract No. *</label><input type="text" id="inContract" placeholder="Required"></div>
+            <div class="form-field"><label>Inbound Receipt No.</label><input type="text" id="inReceiptNo"></div>
+            <div class="form-field"><label>Supplier</label><input type="text" id="inSupplier"></div>
+            <div class="form-field"><label>Batch No. *</label><input type="text" id="inBatchNo" placeholder="Required"></div>
+            <div class="form-field"><label>Production Date</label><input type="date" id="inProdDate" lang="en"></div>
+            <div class="form-field"><label>Whse Manager</label><input type="text" id="inWhManager"></div>
+            <div class="form-field"><label>Notes</label><input type="text" id="inNotes"></div>
+            <div class="form-field"><button id="submitInboundBtn" class="btn-primary">✅ Confirm</button></div>
+        </div>
+        <div id="weightAutoHint" class="weight-hint"></div>
+    </div>
+
+    <!-- Outbound Form -->
+    <div id="outbound" class="form-card">
+        <div class="card-header" style="padding:0 0 12px 0;"><h2>📤 Register Outbound</h2></div>
+        <div class="form-grid">
+            <div class="form-field"><label>Warehouse *</label><select id="outWhSelect"></select></div>
+            <div class="form-field"><label>Product *</label><select id="outProductSelect"></select></div>
+            <div class="form-field"><label>Client *</label><input type="text" id="outClient" placeholder="e.g., AGK"></div>
+            <div class="form-field"><label>Quantity *</label><input type="number" id="outQuantity" min="1" value="1"></div>
+            <div class="form-field" id="outWeightField" style="display:none;"><label>Total Weight (kg)</label><input type="number" id="outWeight" step="0.1" value="0"></div>
+            <div class="form-field"><label>Outbound Ref. *</label><input type="text" id="outRef" placeholder="Required"></div>
+            <div class="form-field"><label>Batch No. *</label><input type="text" id="outBatchNo" placeholder="Required"></div>
+            <div class="form-field"><label>Whse Manager</label><input type="text" id="outWhManager"></div>
+            <div class="form-field"><label>Notes</label><input type="text" id="outNotes"></div>
+            <div class="form-field"><button id="submitOutboundBtn" class="btn-primary">✅ Confirm</button></div>
+        </div>
+        <div id="outWeightAutoHint" class="weight-hint"></div>
+    </div>
+
+    <!-- Stock Alerts -->
+    <div id="alerts" class="card"><div class="card-header"><h2>⚠️ Stock Alerts</h2></div><div id="alertSummary" style="padding:12px 24px;"></div></div>
+    <!-- Expiry Alerts -->
+    <div id="expiry" class="card"><div class="card-header"><h2>⏰ Expiry Alerts</h2></div><div id="expirySummary" style="padding:12px 24px;"></div></div>
+
+    <!-- Current Inventory -->
+    <div id="inventory" class="card">
+        <div class="card-header"><h2>📊 Current Inventory</h2><div class="form-field" style="min-width:200px;"><label>Filter by Warehouse</label><select id="inventoryWarehouseFilter"></select></div></div>
+        <div style="overflow-x:auto;"><table id="stockTable"><thead><tr><th>Warehouse</th><th>Manager</th><th>Product</th><th>Client</th><th>Units</th><th>Weight (kg)</th></tr></thead><tbody id="stockTbody"></tbody></table></div>
+    </div>
+
+    <!-- Dynamic Charts -->
+    <div id="charts" class="chart-container">
+        <div class="card-header"><h2>📈 Dynamic Analytics</h2></div>
+        <div class="chart-row"><div class="chart-box"><h3>Product Trend</h3><select id="chartProductSelect"></select><canvas id="productTrendChart"></canvas></div>
+        <div class="chart-box"><h3>Supplier Trend</h3><select id="chartSupplierSelect"></select><canvas id="supplierTrendChart"></canvas></div></div>
+        <div class="chart-row"><div class="chart-box"><h3>Client Trend</h3><select id="chartClientSelect"></select><canvas id="clientTrendChart"></canvas><div id="clientTurnoverInfo"></div></div></div>
+    </div>
+
+    <!-- Transaction Ledger with Date Range -->
+    <div id="ledger" class="card">
+        <div class="card-header">
+            <h2>📋 Transaction Ledger</h2>
+            <div class="time-filter">
+                <label>From:</label><input type="date" id="dateFrom" lang="en">
+                <label>To:</label><input type="date" id="dateTo" lang="en">
+                <button id="applyDateRange" class="btn-primary">Filter</button>
+                <button id="resetDateRange">Reset</button>
+                <button id="exportRangeTrans" class="btn-primary">📎 Export Filtered</button>
+            </div>
+        </div>
+        <div class="scrollable-table">
+            <table id="transactionTable">
+                <thead><tr><th>Date</th><th>Type</th><th>Warehouse</th><th>Product</th><th>Client</th><th>Units</th><th>Weight</th><th>Doc No.</th><th>Batch No.</th><th>Supplier</th><th>Whse Mgr</th><th>Operator</th><th>Notes</th><th>Actions</th></tr></thead>
+                <tbody id="transactionTbody"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="footer-note">✅ All actions (add/edit/delete) are logged with operator username. Use date range to filter transactions. If performance degrades, use "Clean Old Transactions" to archive/delete old data.</div>
+</div>
+
+<!-- Product Modal -->
+<div id="productModal" class="modal"><div class="modal-content"><h3 id="modalTitle">Add Product</h3><input type="hidden" id="editProductId"><div class="form-field"><label>Product Code *</label><input type="text" id="prodCode"></div><div class="form-field"><label>Product Name *</label><input type="text" id="prodName"></div><div class="form-field"><label>Supplier</label><input type="text" id="prodSupplier"></div><div class="form-field"><label>Packaging</label><select id="prodPackaging"><option value="Drum">Drum</option><option value="Bottle">Bottle</option></select></div><div class="form-field"><label>Unit Weight (kg)</label><input type="number" id="prodUnitWeight" step="0.1" value="0"></div><div class="form-field"><label>Min Stock</label><input type="number" id="prodMinStock" min="0" value="10"></div><div class="form-field"><label>Shelf Life (months)</label><input type="number" id="prodShelfLife" min="0" value="12"></div><div class="modal-buttons"><button id="modalCancelBtn">Cancel</button><button id="modalSaveBtn" class="btn-primary">Save</button></div></div></div>
+<!-- Transaction Edit Modal -->
+<div id="transactionModal" class="modal"><div class="modal-content"><h3>Edit Transaction</h3><input type="hidden" id="editTransactionId"><div class="form-field"><label>Type</label><select id="editTransType"><option value="inbound">Inbound</option><option value="outbound">Outbound</option></select></div><div class="form-field"><label>Warehouse</label><select id="editTransWarehouse"></select></div><div class="form-field"><label>Product</label><select id="editTransProduct"></select></div><div class="form-field"><label>Client</label><input type="text" id="editTransClient"></div><div class="form-field"><label>Units</label><input type="number" id="editTransUnits" min="1"></div><div class="form-field"><label>Weight (kg)</label><input type="number" id="editTransWeight" step="0.1"></div><div class="form-field"><label>Document No.</label><input type="text" id="editTransDocNo"></div><div class="form-field"><label>Batch No.</label><input type="text" id="editTransBatchNo"></div><div class="form-field"><label>Supplier</label><input type="text" id="editTransSupplier"></div><div class="form-field"><label>Whse Manager</label><input type="text" id="editTransWhManager"></div><div class="form-field"><label>Notes</label><input type="text" id="editTransNotes"></div><div class="modal-buttons"><button id="transModalCancelBtn">Cancel</button><button id="transModalSaveBtn" class="btn-primary">Update</button></div></div></div>
+
+<script>
+    // ---------- AUTHENTICATION & GLOBAL USER ----------
+    const VALID_CREDENTIALS = { admin: "admin123", manager: "manager" }; // username:password
+    let currentUser = null;
+
+    function checkAuth() {
+        if (sessionStorage.getItem('inventoryUser')) {
+            currentUser = sessionStorage.getItem('inventoryUser');
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            initApp();
+        }
+    }
+    document.getElementById('loginBtn').addEventListener('click', () => {
+        const user = document.getElementById('usernameInput').value.trim();
+        const pwd = document.getElementById('passwordInput').value;
+        if (VALID_CREDENTIALS[user] && VALID_CREDENTIALS[user] === pwd) {
+            currentUser = user;
+            sessionStorage.setItem('inventoryUser', user);
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            initApp();
+        } else {
+            document.getElementById('loginError').innerText = 'Invalid username or password.';
+        }
+    });
+    checkAuth();
+
+    // ---------- DATA MODELS ----------
+    let warehouses = [
+        { id: 1, name: "Kaluga Warehouse 1", manager: "" },
+        { id: 2, name: "Kaluga Warehouse 2", manager: "" },
+        { id: 3, name: "Kaluga Warehouse 3", manager: "" },
+        { id: 4, name: "Kaluga Warehouse 4", manager: "" }
+    ];
+    let products = [];
+    let stocks = [];        // { warehouseId, productId, client, units, totalWeightKg }
+    let transactions = [];  // each includes operator field
+    let nextTransId = 1;
+
+    function loadData() {
+        const saved = localStorage.getItem('kalugaInventoryV4');
+        if (saved) {
+            const data = JSON.parse(saved);
+            products = data.products || [];
+            stocks = data.stocks || [];
+            transactions = data.transactions || [];
+            nextTransId = data.nextTransId || 1;
+            if (data.warehouses) warehouses = data.warehouses;
+        } else {
+            products = [];
+            stocks = [];
+            transactions = [];
+            nextTransId = 1;
+        }
+    }
+    function saveData() {
+        localStorage.setItem('kalugaInventoryV4', JSON.stringify({ products, stocks, transactions, nextTransId, warehouses }));
+    }
+
+    function getStock(warehouseId, productId, client) {
+        let s = stocks.find(s => s.warehouseId === warehouseId && s.productId === productId && s.client === client);
+        if (!s) {
+            s = { warehouseId, productId, client, units: 0, totalWeightKg: 0 };
+            stocks.push(s);
+        }
+        return s;
+    }
+    function updateStock(warehouseId, productId, client, deltaUnits, deltaWeight) {
+        const stock = getStock(warehouseId, productId, client);
+        stock.units += deltaUnits;
+        stock.totalWeightKg += deltaWeight;
+        if (stock.units < 0) { stock.units = 0; stock.totalWeightKg = 0; }
+        saveData();
+    }
+
+    function addTransaction(trans) {
+        trans.id = nextTransId++;
+        trans.operator = currentUser;
+        trans.timestamp = trans.timestamp || new Date().toISOString();
+        transactions.push(trans);
+        const deltaUnits = (trans.type === 'inbound') ? trans.units : -trans.units;
+        const deltaWeight = (trans.type === 'inbound') ? trans.totalWeightKg : -trans.totalWeightKg;
+        updateStock(trans.warehouseId, trans.productId, trans.client, deltaUnits, deltaWeight);
+        saveData();
+        return trans;
+    }
+
+    function deleteTransaction(transId) {
+        const index = transactions.findIndex(t => t.id === transId);
+        if (index === -1) return false;
+        const t = transactions[index];
+        const deltaUnits = (t.type === 'inbound') ? -t.units : t.units;
+        const deltaWeight = (t.type === 'inbound') ? -t.totalWeightKg : t.totalWeightKg;
+        updateStock(t.warehouseId, t.productId, t.client, deltaUnits, deltaWeight);
+        transactions.splice(index, 1);
+        saveData();
+        return true;
+    }
+
+    function updateTransaction(transId, newData) {
+        const index = transactions.findIndex(t => t.id === transId);
+        if (index === -1) return false;
+        const old = transactions[index];
+        const oldDeltaUnits = (old.type === 'inbound') ? -old.units : old.units;
+        const oldDeltaWeight = (old.type === 'inbound') ? -old.totalWeightKg : old.totalWeightKg;
+        updateStock(old.warehouseId, old.productId, old.client, oldDeltaUnits, oldDeltaWeight);
+        const newDeltaUnits = (newData.type === 'inbound') ? newData.units : -newData.units;
+        const newDeltaWeight = (newData.type === 'inbound') ? newData.totalWeightKg : -newData.totalWeightKg;
+        updateStock(newData.warehouseId, newData.productId, newData.client, newDeltaUnits, newDeltaWeight);
+        transactions[index] = { ...old, ...newData, timestamp: old.timestamp, operator: currentUser };
+        saveData();
+        return true;
+    }
+
+    // Date range filter
+    let currentDateRange = { from: null, to: null };
+    function filterTransactionsByDateRange(transactions, fromDate, toDate) {
+        if (!fromDate && !toDate) return transactions;
+        return transactions.filter(t => {
+            const d = new Date(t.timestamp).setHours(0,0,0,0);
+            if (fromDate && d < new Date(fromDate).setHours(0,0,0,0)) return false;
+            if (toDate && d > new Date(toDate).setHours(0,0,0,0)) return false;
+            return true;
+        });
+    }
+
+    // Rendering functions
+    let currentProductFilter = { code: '', supplier: '' };
+
+    function renderProductTable() {
+        let filtered = [...products];
+        if (currentProductFilter.code) filtered = filtered.filter(p => p.code.toLowerCase().includes(currentProductFilter.code.toLowerCase()));
+        if (currentProductFilter.supplier) filtered = filtered.filter(p => p.supplier && p.supplier.toLowerCase().includes(currentProductFilter.supplier.toLowerCase()));
+        const tbody = document.getElementById('productTbody');
+        tbody.innerHTML = '';
+        if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="8">No products match.</td></tr>'; return; }
+        filtered.forEach(prod => {
+            const row = tbody.insertRow();
+            row.insertCell(0).innerText = prod.code;
+            row.insertCell(1).innerText = prod.name;
+            row.insertCell(2).innerText = prod.supplier || '—';
+            row.insertCell(3).innerText = prod.packaging;
+            row.insertCell(4).innerText = prod.unitWeight ? `${prod.unitWeight} kg` : '—';
+            row.insertCell(5).innerText = prod.minStock ?? '—';
+            row.insertCell(6).innerText = prod.shelfLifeMonths ?? '—';
+            const actions = row.insertCell(7);
+            actions.className = 'action-buttons';
+            actions.innerHTML = `<button class="edit-product" data-id="${prod.id}">✏️</button><button class="delete-product" data-id="${prod.id}" style="background:#fee2e2;">🗑️</button>`;
+        });
+        document.querySelectorAll('.edit-product').forEach(btn => btn.addEventListener('click', () => openEditProductModal(btn.dataset.id)));
+        document.querySelectorAll('.delete-product').forEach(btn => btn.addEventListener('click', () => {
+            const id = parseInt(btn.dataset.id);
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+            const hasStock = stocks.some(s => s.productId === id && s.units > 0);
+            const hasTrans = transactions.some(t => t.productId === id);
+            if (hasStock || hasTrans) { alert(`Cannot delete "${prod.code}". Has stock or transactions.`); return; }
+            if (confirm(`Delete "${prod.code}"?`)) {
+                products = products.filter(p => p.id !== id);
+                stocks = stocks.filter(s => s.productId !== id);
+                saveData();
+                renderAll();
+            }
+        }));
+    }
+
+    function renderStockTable() {
+        const filterWarehouse = document.getElementById('inventoryWarehouseFilter').value;
+        const filtered = filterWarehouse === 'all' ? stocks : stocks.filter(s => s.warehouseId == filterWarehouse);
+        const tbody = document.getElementById('stockTbody');
+        tbody.innerHTML = '';
+        for (const wh of warehouses) {
+            if (filterWarehouse !== 'all' && wh.id != filterWarehouse) continue;
+            for (const prod of products) {
+                const clientItems = filtered.filter(s => s.warehouseId === wh.id && s.productId === prod.id);
+                if (clientItems.length === 0) {
+                    const row = tbody.insertRow();
+                    row.insertCell(0).innerText = wh.name;
+                    row.insertCell(1).innerText = wh.manager || '—';
+                    row.insertCell(2).innerText = prod.code;
+                    row.insertCell(3).innerText = '—';
+                    row.insertCell(4).innerText = '0';
+                    row.insertCell(5).innerText = '0';
+                } else {
+                    for (const ci of clientItems) {
+                        const row = tbody.insertRow();
+                        row.insertCell(0).innerText = wh.name;
+                        row.insertCell(1).innerText = wh.manager || '—';
+                        row.insertCell(2).innerText = prod.code;
+                        row.insertCell(3).innerText = ci.client;
+                        const isLow = ci.units < (prod.minStock || 0);
+                        row.insertCell(4).innerHTML = `<span class="${isLow ? 'stock-warning' : ''}">${ci.units} ${isLow ? '⚠️' : ''}</span>`;
+                        row.insertCell(5).innerText = ci.totalWeightKg.toFixed(1);
+                    }
+                }
+            }
+        }
+    }
+
+    function renderLowStockAlerts() {
+        const alerts = [];
+        for (const s of stocks) {
+            const prod = products.find(p => p.id === s.productId);
+            if (prod && s.units < prod.minStock) {
+                const wh = warehouses.find(w => w.id === s.warehouseId);
+                alerts.push({ warehouse: wh?.name, product: prod.code, client: s.client, units: s.units, min: prod.minStock });
+            }
+        }
+        const container = document.getElementById('alertSummary');
+        if (alerts.length === 0) { container.innerHTML = '<div>✅ All stock levels OK.</div>'; return; }
+        let html = '<div class="alert-summary"><strong>⚠️ Low Stock</strong><ul>';
+        alerts.forEach(a => { html += `<li>${a.warehouse} – ${a.product} (${a.client}): ${a.units} < Min:${a.min}</li>`; });
+        html += '</ul></div>';
+        container.innerHTML = html;
+    }
+
+    function renderExpiryAlerts() {
+        const today = new Date();
+        const oneMonthLater = new Date(today); oneMonthLater.setMonth(today.getMonth() + 1);
+        const alerts = [];
+        for (const t of transactions.filter(t => t.type === 'inbound' && t.productionDate)) {
+            const prod = products.find(p => p.id === t.productId);
+            if (!prod || !prod.shelfLifeMonths) continue;
+            const prodDate = new Date(t.productionDate);
+            const expiry = new Date(prodDate); expiry.setMonth(prodDate.getMonth() + prod.shelfLifeMonths);
+            if (expiry <= oneMonthLater) {
+                const wh = warehouses.find(w => w.id === t.warehouseId);
+                alerts.push({ batch: t.batchNo, product: prod.code, client: t.client, warehouse: wh?.name, expiry: expiry.toLocaleDateString() });
+            }
+        }
+        const container = document.getElementById('expirySummary');
+        if (alerts.length === 0) { container.innerHTML = '<div>✅ No expiry within 1 month.</div>'; return; }
+        let html = '<div class="alert-summary" style="border-left-color:#f97316;"><strong>⏰ Expiry Alerts</strong><ul>';
+        alerts.forEach(a => { html += `<li>Batch ${a.batch} – ${a.product} (${a.client}) @ ${a.warehouse}: expires ${a.expiry}</li>`; });
+        html += '</ul></div>';
+        container.innerHTML = html;
+    }
+
+    function renderTransactionTable() {
+        let filtered = [...transactions];
+        if (currentDateRange.from || currentDateRange.to) {
+            filtered = filterTransactionsByDateRange(filtered, currentDateRange.from, currentDateRange.to);
+        }
+        const tbody = document.getElementById('transactionTbody');
+        tbody.innerHTML = '';
+        if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="14">No transactions for selected range.</td></tr>'; return; }
+        const sorted = [...filtered].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+        sorted.forEach(t => {
+            const wh = warehouses.find(w => w.id === t.warehouseId);
+            const prod = products.find(p => p.id === t.productId);
+            const row = tbody.insertRow();
+            row.insertCell(0).innerText = new Date(t.timestamp).toLocaleString();
+            row.insertCell(1).innerText = t.type === 'inbound' ? '📥 Inbound' : '📤 Outbound';
+            row.insertCell(2).innerText = wh ? wh.name : t.warehouseId;
+            row.insertCell(3).innerText = prod ? `${prod.code} - ${prod.name}` : t.productId;
+            row.insertCell(4).innerText = t.client || '—';
+            row.insertCell(5).innerText = t.units;
+            row.insertCell(6).innerText = t.totalWeightKg.toFixed(1);
+            row.insertCell(7).innerText = t.documentNo || '—';
+            row.insertCell(8).innerText = t.batchNo || '—';
+            row.insertCell(9).innerText = t.supplier || '—';
+            row.insertCell(10).innerText = t.whManager || '—';
+            row.insertCell(11).innerText = t.operator || '—';
+            row.insertCell(12).innerText = t.notes || '—';
+            const actions = row.insertCell(13);
+            actions.innerHTML = `<button class="edit-trans" data-id="${t.id}">✏️</button><button class="delete-trans" data-id="${t.id}" style="background:#fee2e2;">🗑️</button>`;
+        });
+        document.querySelectorAll('.edit-trans').forEach(btn => btn.addEventListener('click', () => openEditTransactionModal(parseInt(btn.dataset.id))));
+        document.querySelectorAll('.delete-trans').forEach(btn => btn.addEventListener('click', () => { if (confirm('Delete transaction? This action is logged.')) { deleteTransaction(parseInt(btn.dataset.id)); renderAll(); } }));
+    }
+
+    // Product and other selects
+    function renderProductSelects() {
+        const selects = ['inProductSelect', 'outProductSelect', 'editTransProduct', 'chartProductSelect'];
+        selects.forEach(id => {
+            const sel = document.getElementById(id);
+            if (!sel) return;
+            sel.innerHTML = '<option value="">-- Select Product --</option>';
+            products.forEach(p => { sel.appendChild(new Option(`${p.code} - ${p.name}`, p.id)); });
+        });
+    }
+
+    function renderWarehouseSelects() {
+        const selects = ['inWhSelect', 'outWhSelect', 'editTransWarehouse'];
+        selects.forEach(id => {
+            const sel = document.getElementById(id);
+            if (!sel) return;
+            sel.innerHTML = '';
+            warehouses.forEach(wh => { sel.appendChild(new Option(`${wh.name} (Mgr: ${wh.manager})`, wh.id)); });
+        });
+    }
+
+    function updateManagerFields() {
+        const inWh = warehouses.find(w => w.id == document.getElementById('inWhSelect').value);
+        const outWh = warehouses.find(w => w.id == document.getElementById('outWhSelect').value);
+        document.getElementById('inWhManager').value = inWh ? inWh.manager : '';
+        document.getElementById('outWhManager').value = outWh ? outWh.manager : '';
+    }
+
+    function updateQuantityWeightFields(prodSelectId, qtyId, weightId, hintId) {
+        const prodId = parseInt(document.getElementById(prodSelectId).value);
+        const prod = products.find(p => p.id === prodId);
+        const weightField = document.getElementById(weightId).closest('.form-field');
+        const qtyInput = document.getElementById(qtyId);
+        if (!prod) { weightField.style.display = 'none'; return; }
+        if (prod.packaging === 'Drum') {
+            weightField.style.display = 'block';
+            const units = parseFloat(qtyInput.value) || 0;
+            const autoWeight = units * (prod.unitWeight || 0);
+            document.getElementById(weightId).value = autoWeight.toFixed(1);
+            if (hintId) document.getElementById(hintId).innerHTML = `💡 ${units} drums × ${prod.unitWeight} kg = ${autoWeight} kg`;
+        } else {
+            weightField.style.display = 'none';
+            if (hintId) document.getElementById(hintId).innerHTML = '';
+        }
+    }
+
+    // Chart functions (fixed to work after data changes)
+    let productChart, supplierChart, clientChart;
+    function initCharts() {
+        productChart = new Chart(document.getElementById('productTrendChart'), { type: 'line', data: { labels: [], datasets: [] }, options: { responsive: true } });
+        supplierChart = new Chart(document.getElementById('supplierTrendChart'), { type: 'line', data: { labels: [], datasets: [] }, options: { responsive: true } });
+        clientChart = new Chart(document.getElementById('clientTrendChart'), { type: 'line', data: { labels: [], datasets: [] }, options: { responsive: true } });
+    }
+    function getProductDailyData(productId) {
+        const filtered = transactions.filter(t => t.productId === productId);
+        const map = new Map();
+        filtered.forEach(t => {
+            const date = new Date(t.timestamp).toISOString().split('T')[0];
+            if (!map.has(date)) map.set(date, { inbound: 0, outbound: 0 });
+            const entry = map.get(date);
+            if (t.type === 'inbound') entry.inbound += t.units;
+            else entry.outbound += t.units;
+        });
+        const dates = Array.from(map.keys()).sort();
+        return { dates, inbound: dates.map(d => map.get(d).inbound), outbound: dates.map(d => map.get(d).outbound) };
+    }
+    function getSupplierDailyData(supplier) {
+        const prodIds = products.filter(p => p.supplier === supplier).map(p => p.id);
+        const filtered = transactions.filter(t => prodIds.includes(t.productId));
+        const map = new Map();
+        filtered.forEach(t => {
+            const date = new Date(t.timestamp).toISOString().split('T')[0];
+            if (!map.has(date)) map.set(date, { inbound: 0, outbound: 0 });
+            const entry = map.get(date);
+            if (t.type === 'inbound') entry.inbound += t.units;
+            else entry.outbound += t.units;
+        });
+        const dates = Array.from(map.keys()).sort();
+        return { dates, inbound: dates.map(d => map.get(d).inbound), outbound: dates.map(d => map.get(d).outbound) };
+    }
+    function getClientDailyData(client) {
+        const filtered = transactions.filter(t => t.client === client);
+        const map = new Map();
+        filtered.forEach(t => {
+            const date = new Date(t.timestamp).toISOString().split('T')[0];
+            if (!map.has(date)) map.set(date, { inbound: 0, outbound: 0 });
+            const entry = map.get(date);
+            if (t.type === 'inbound') entry.inbound += t.units;
+            else entry.outbound += t.units;
+        });
+        const dates = Array.from(map.keys()).sort();
+        return { dates, inbound: dates.map(d => map.get(d).inbound), outbound: dates.map(d => map.get(d).outbound) };
+    }
+    function updateProductChart() {
+        const pid = parseInt(document.getElementById('chartProductSelect').value);
+        if (!pid) { productChart.data = { labels: [], datasets: [] }; productChart.update(); return; }
+        const { dates, inbound, outbound } = getProductDailyData(pid);
+        productChart.data.labels = dates;
+        productChart.data.datasets = [{ label: 'Inbound', data: inbound, borderColor: '#2e7d32' }, { label: 'Outbound', data: outbound, borderColor: '#d32f2f' }];
+        productChart.update();
+    }
+    function updateSupplierChart() {
+        const sup = document.getElementById('chartSupplierSelect').value;
+        if (!sup) { supplierChart.data = { labels: [], datasets: [] }; supplierChart.update(); return; }
+        const { dates, inbound, outbound } = getSupplierDailyData(sup);
+        supplierChart.data.labels = dates;
+        supplierChart.data.datasets = [{ label: 'Inbound', data: inbound, borderColor: '#2e7d32' }, { label: 'Outbound', data: outbound, borderColor: '#d32f2f' }];
+        supplierChart.update();
+    }
+    function updateClientChart() {
+        const client = document.getElementById('chartClientSelect').value;
+        const infoDiv = document.getElementById('clientTurnoverInfo');
+        if (!client) { clientChart.data = { labels: [], datasets: [] }; clientChart.update(); infoDiv.innerHTML = ''; return; }
+        const { dates, inbound, outbound } = getClientDailyData(client);
+        if (dates.length === 0) { clientChart.data = { labels: [], datasets: [] }; clientChart.update(); infoDiv.innerHTML = 'No data'; return; }
+        const totalIn = inbound.reduce((a,b)=>a+b,0);
+        const totalOut = outbound.reduce((a,b)=>a+b,0);
+        const rate = totalIn === 0 ? (totalOut === 0 ? 0 : Infinity) : (totalOut / totalIn).toFixed(2);
+        infoDiv.innerHTML = `<strong>Turnover (Out/In):</strong> ${rate === Infinity ? '∞' : rate} (In:${totalIn}, Out:${totalOut})`;
+        clientChart.data.labels = dates;
+        clientChart.data.datasets = [{ label: 'Inbound', data: inbound, borderColor: '#2e7d32' }, { label: 'Outbound', data: outbound, borderColor: '#d32f2f' }];
+        clientChart.update();
+    }
+    function populateChartSelectors() {
+        const prodSel = document.getElementById('chartProductSelect');
+        const supSel = document.getElementById('chartSupplierSelect');
+        const clientSel = document.getElementById('chartClientSelect');
+        prodSel.innerHTML = '<option value="">-- Select Product --</option>';
+        products.forEach(p => { prodSel.appendChild(new Option(`${p.code} - ${p.name}`, p.id)); });
+        const suppliers = [...new Set(products.map(p => p.supplier).filter(s => s))];
+        supSel.innerHTML = '<option value="">-- Select Supplier --</option>';
+        suppliers.forEach(s => { supSel.appendChild(new Option(s, s)); });
+        const clients = [...new Set(transactions.map(t => t.client).filter(c => c))];
+        clientSel.innerHTML = '<option value="">-- Select Client --</option>';
+        clients.forEach(c => { clientSel.appendChild(new Option(c, c)); });
+        prodSel.onchange = () => updateProductChart();
+        supSel.onchange = () => updateSupplierChart();
+        clientSel.onchange = () => updateClientChart();
+    }
+
+    function renderInventoryWarehouseFilter() {
+        const filter = document.getElementById('inventoryWarehouseFilter');
+        filter.innerHTML = '<option value="all">All Warehouses</option>';
+        warehouses.forEach(wh => { filter.appendChild(new Option(wh.name, wh.id)); });
+        filter.onchange = () => renderStockTable();
+    }
+
+    // Product CRUD
+    function openAddProductModal() {
+        document.getElementById('modalTitle').innerText = 'Add Product';
+        document.getElementById('editProductId').value = '';
+        document.getElementById('prodCode').value = '';
+        document.getElementById('prodName').value = '';
+        document.getElementById('prodSupplier').value = '';
+        document.getElementById('prodPackaging').value = 'Drum';
+        document.getElementById('prodUnitWeight').value = '';
+        document.getElementById('prodMinStock').value = '10';
+        document.getElementById('prodShelfLife').value = '12';
+        document.getElementById('productModal').style.display = 'flex';
+    }
+    function openEditProductModal(id) {
+        const prod = products.find(p => p.id == id);
+        if (!prod) return;
+        document.getElementById('modalTitle').innerText = 'Edit Product';
+        document.getElementById('editProductId').value = prod.id;
+        document.getElementById('prodCode').value = prod.code;
+        document.getElementById('prodName').value = prod.name;
+        document.getElementById('prodSupplier').value = prod.supplier || '';
+        document.getElementById('prodPackaging').value = prod.packaging;
+        document.getElementById('prodUnitWeight').value = prod.unitWeight;
+        document.getElementById('prodMinStock').value = prod.minStock;
+        document.getElementById('prodShelfLife').value = prod.shelfLifeMonths;
+        document.getElementById('productModal').style.display = 'flex';
+    }
+    function saveProductFromModal() {
+        const id = document.getElementById('editProductId').value;
+        const code = document.getElementById('prodCode').value.trim();
+        const name = document.getElementById('prodName').value.trim();
+        const supplier = document.getElementById('prodSupplier').value.trim();
+        const packaging = document.getElementById('prodPackaging').value;
+        const unitWeight = parseFloat(document.getElementById('prodUnitWeight').value) || 0;
+        const minStock = parseInt(document.getElementById('prodMinStock').value) || 0;
+        const shelfLife = parseInt(document.getElementById('prodShelfLife').value) || 0;
+        if (!code || !name) { alert('Code and Name required'); return; }
+        if (!id && products.some(p => p.code === code)) { alert('Code exists'); return; }
+        if (id) {
+            const idx = products.findIndex(p => p.id == id);
+            if (idx !== -1) products[idx] = { ...products[idx], code, name, supplier, packaging, unitWeight, minStock, shelfLifeMonths: shelfLife };
+        } else {
+            const newId = Date.now();
+            products.push({ id: newId, code, name, supplier, packaging, unitWeight, minStock, shelfLifeMonths: shelfLife });
+        }
+        saveData();
+        closeProductModal();
+        renderAll();
+    }
+    function closeProductModal() { document.getElementById('productModal').style.display = 'none'; }
+
+    function openEditTransactionModal(transId) {
+        const t = transactions.find(t => t.id === transId);
+        if (!t) return;
+        document.getElementById('editTransactionId').value = t.id;
+        document.getElementById('editTransType').value = t.type;
+        document.getElementById('editTransWarehouse').value = t.warehouseId;
+        document.getElementById('editTransProduct').value = t.productId;
+        document.getElementById('editTransClient').value = t.client || '';
+        document.getElementById('editTransUnits').value = t.units;
+        document.getElementById('editTransWeight').value = t.totalWeightKg;
+        document.getElementById('editTransDocNo').value = t.documentNo || '';
+        document.getElementById('editTransBatchNo').value = t.batchNo || '';
+        document.getElementById('editTransSupplier').value = t.supplier || '';
+        document.getElementById('editTransWhManager').value = t.whManager || '';
+        document.getElementById('editTransNotes').value = t.notes || '';
+        document.getElementById('transactionModal').style.display = 'flex';
+    }
+    function saveTransactionEdit() {
+        const id = parseInt(document.getElementById('editTransactionId').value);
+        const newType = document.getElementById('editTransType').value;
+        const whId = parseInt(document.getElementById('editTransWarehouse').value);
+        const prodId = parseInt(document.getElementById('editTransProduct').value);
+        const client = document.getElementById('editTransClient').value.trim();
+        const units = parseFloat(document.getElementById('editTransUnits').value);
+        const weight = parseFloat(document.getElementById('editTransWeight').value);
+        if (!whId || !prodId || !client || isNaN(units) || units <= 0 || weight < 0) { alert('Invalid data'); return; }
+        const old = transactions.find(t => t.id === id);
+        if (!old) return;
+        const current = getStock(whId, prodId, client);
+        let stockAfterReverse = current.units;
+        const oldDelta = (old.type === 'inbound') ? -old.units : old.units;
+        stockAfterReverse -= oldDelta;
+        const newDelta = (newType === 'inbound') ? units : -units;
+        if (stockAfterReverse + newDelta < 0) { alert('Insufficient stock after edit'); return; }
+        updateTransaction(id, {
+            type: newType, warehouseId: whId, productId: prodId, client, units, totalWeightKg: weight,
+            documentNo: document.getElementById('editTransDocNo').value.trim(),
+            batchNo: document.getElementById('editTransBatchNo').value.trim(),
+            supplier: document.getElementById('editTransSupplier').value.trim(),
+            whManager: document.getElementById('editTransWhManager').value.trim(),
+            notes: document.getElementById('editTransNotes').value.trim()
+        });
+        closeTransactionModal();
+        renderAll();
+    }
+    function closeTransactionModal() { document.getElementById('transactionModal').style.display = 'none'; }
+
+    // Form handlers
+    function handleInbound() {
+        const whId = parseInt(document.getElementById('inWhSelect').value);
+        const prodId = parseInt(document.getElementById('inProductSelect').value);
+        const client = document.getElementById('inClient').value.trim();
+        const units = parseFloat(document.getElementById('inQuantity').value);
+        const contract = document.getElementById('inContract').value.trim();
+        const batchNo = document.getElementById('inBatchNo').value.trim();
+        if (!whId || !prodId || !client || isNaN(units) || units <= 0 || !contract || !batchNo) { alert('Required fields missing'); return; }
+        const prod = products.find(p => p.id === prodId);
+        let weight = parseFloat(document.getElementById('inWeight').value);
+        if (prod.packaging === 'Drum' && (isNaN(weight) || weight <= 0)) { alert('Weight required for drums'); return; }
+        addTransaction({
+            type: 'inbound', timestamp: new Date().toISOString(), warehouseId: whId, productId: prodId, client, units, totalWeightKg: weight,
+            documentNo: contract, batchNo, supplier: document.getElementById('inSupplier').value.trim(),
+            inboundReceiptNo: document.getElementById('inReceiptNo').value.trim(),
+            productionDate: document.getElementById('inProdDate').value,
+            whManager: document.getElementById('inWhManager').value.trim(),
+            notes: document.getElementById('inNotes').value.trim()
+        });
+        renderAll();
+        document.getElementById('inContract').value = ''; document.getElementById('inBatchNo').value = '';
+        document.getElementById('inQuantity').value = 1;
+    }
+    function handleOutbound() {
+        const whId = parseInt(document.getElementById('outWhSelect').value);
+        const prodId = parseInt(document.getElementById('outProductSelect').value);
+        const client = document.getElementById('outClient').value.trim();
+        const units = parseFloat(document.getElementById('outQuantity').value);
+        const outRef = document.getElementById('outRef').value.trim();
+        const batchNo = document.getElementById('outBatchNo').value.trim();
+        if (!whId || !prodId || !client || isNaN(units) || units <= 0 || !outRef || !batchNo) { alert('Required fields missing'); return; }
+        const prod = products.find(p => p.id === prodId);
+        let weight = parseFloat(document.getElementById('outWeight').value);
+        if (prod.packaging === 'Drum' && (isNaN(weight) || weight <= 0)) { alert('Weight required for drums'); return; }
+        const current = getStock(whId, prodId, client);
+        if (current.units < units) { alert(`Insufficient stock for ${client}: available ${current.units}`); return; }
+        addTransaction({
+            type: 'outbound', timestamp: new Date().toISOString(), warehouseId: whId, productId: prodId, client, units, totalWeightKg: weight,
+            documentNo: outRef, batchNo, whManager: document.getElementById('outWhManager').value.trim(),
+            notes: document.getElementById('outNotes').value.trim()
+        });
+        renderAll();
+        document.getElementById('outRef').value = ''; document.getElementById('outBatchNo').value = '';
+        document.getElementById('outQuantity').value = 1;
+    }
+
+    function exportStockCSV() {
+        const rows = [['Warehouse','Manager','Product','Client','Units','Weight(kg)']];
+        stocks.forEach(s => {
+            const wh = warehouses.find(w => w.id === s.warehouseId);
+            const prod = products.find(p => p.id === s.productId);
+            rows.push([wh?.name || s.warehouseId, wh?.manager || '', prod?.code || s.productId, s.client, s.units, s.totalWeightKg]);
+        });
+        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `stock_${new Date().toISOString().slice(0,19)}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }
+
+    function exportFilteredTransactions() {
+        let filtered = [...transactions];
+        if (currentDateRange.from || currentDateRange.to) {
+            filtered = filterTransactionsByDateRange(filtered, currentDateRange.from, currentDateRange.to);
+        }
+        const rows = [['Timestamp','Type','Warehouse','Product','Client','Units','Weight','Doc No','Batch No','Supplier','Whse Mgr','Operator','Notes']];
+        filtered.forEach(t => {
+            const wh = warehouses.find(w => w.id === t.warehouseId);
+            const prod = products.find(p => p.id === t.productId);
+            rows.push([
+                new Date(t.timestamp).toLocaleString(), t.type,
+                wh ? wh.name : t.warehouseId,
+                prod ? `${prod.code} - ${prod.name}` : t.productId,
+                t.client, t.units, t.totalWeightKg, t.documentNo || '', t.batchNo || '', t.supplier || '',
+                t.whManager || '', t.operator || '', t.notes || ''
+            ]);
+        });
+        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `transactions_range_${currentDateRange.from || 'start'}_to_${currentDateRange.to || 'end'}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }
+
+    function cleanOldTransactions() {
+        const months = prompt("Delete transactions older than how many months? (Enter number, e.g., 6)", "12");
+        if (!months) return;
+        const cutoff = new Date();
+        cutoff.setMonth(cutoff.getMonth() - parseInt(months));
+        const beforeCount = transactions.length;
+        const newTransactions = transactions.filter(t => new Date(t.timestamp) >= cutoff);
+        const deleted = beforeCount - newTransactions.length;
+        if (deleted === 0) { alert("No transactions older than " + months + " months."); return; }
+        if (confirm(`Delete ${deleted} transactions older than ${months} months? This cannot be undone.`)) {
+            // Need to recompute stock from remaining transactions? For simplicity, we recalc stock fully.
+            // Reset stocks and rebuild from remaining transactions.
+            stocks = [];
+            transactions = newTransactions;
+            // Rebuild stock
+            for (const t of transactions) {
+                const deltaUnits = (t.type === 'inbound') ? t.units : -t.units;
+                const deltaWeight = (t.type === 'inbound') ? t.totalWeightKg : -t.totalWeightKg;
+                const stock = getStock(t.warehouseId, t.productId, t.client);
+                stock.units += deltaUnits;
+                stock.totalWeightKg += deltaWeight;
+                if (stock.units < 0) { stock.units = 0; stock.totalWeightKg = 0; }
+            }
+            saveData();
+            renderAll();
+            alert(`Deleted ${deleted} old transactions. Stock recalculated.`);
+        }
+    }
+
+    function resetAllData() {
+        if (confirm('⚠️ Reset ALL data? This will delete all products, transactions, and stock. Cannot be undone.')) {
+            localStorage.removeItem('kalugaInventoryV4');
+            loadData();
+            renderAll();
+        }
+    }
+
+    function applyDateRange() {
+        const from = document.getElementById('dateFrom').value;
+        const to = document.getElementById('dateTo').value;
+        currentDateRange = { from: from || null, to: to || null };
+        renderTransactionTable();
+    }
+    function resetDateRange() {
+        document.getElementById('dateFrom').value = '';
+        document.getElementById('dateTo').value = '';
+        currentDateRange = { from: null, to: null };
+        renderTransactionTable();
+    }
+
+    function renderAll() {
+        renderProductTable();
+        renderStockTable();
+        renderLowStockAlerts();
+        renderExpiryAlerts();
+        renderTransactionTable();
+        renderProductSelects();
+        renderWarehouseSelects();
+        updateManagerFields();
+        populateChartSelectors();
+        updateProductChart();
+        updateSupplierChart();
+        updateClientChart();
+        renderInventoryWarehouseFilter();
+    }
+
+    function setupNav() {
+        const offset = 80;
+        document.querySelectorAll('[data-nav]').forEach(link => {
+            link.addEventListener('click', () => {
+                const target = link.getAttribute('data-nav');
+                const el = document.getElementById(target);
+                if (el) {
+                    const y = el.getBoundingClientRect().top + window.scrollY - offset;
+                    window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+            });
+        });
+    }
+
+    function initApp() {
+        loadData();
+        initCharts();
+        document.getElementById('submitInboundBtn').addEventListener('click', handleInbound);
+        document.getElementById('submitOutboundBtn').addEventListener('click', handleOutbound);
+        document.getElementById('openAddProductBtn').addEventListener('click', openAddProductModal);
+        document.getElementById('modalCancelBtn').addEventListener('click', closeProductModal);
+        document.getElementById('modalSaveBtn').addEventListener('click', saveProductFromModal);
+        document.getElementById('transModalCancelBtn').addEventListener('click', closeTransactionModal);
+        document.getElementById('transModalSaveBtn').addEventListener('click', saveTransactionEdit);
+        document.getElementById('exportStockBtn').addEventListener('click', exportStockCSV);
+        document.getElementById('resetBtn').addEventListener('click', resetAllData);
+        document.getElementById('cleanOldDataBtn').addEventListener('click', cleanOldTransactions);
+        document.getElementById('applyDateRange').addEventListener('click', applyDateRange);
+        document.getElementById('resetDateRange').addEventListener('click', resetDateRange);
+        document.getElementById('exportRangeTrans').addEventListener('click', exportFilteredTransactions);
+        document.getElementById('inProductSelect').addEventListener('change', () => updateQuantityWeightFields('inProductSelect', 'inQuantity', 'inWeight', 'weightAutoHint'));
+        document.getElementById('outProductSelect').addEventListener('change', () => updateQuantityWeightFields('outProductSelect', 'outQuantity', 'outWeight', 'outWeightAutoHint'));
+        document.getElementById('inQuantity').addEventListener('input', () => updateQuantityWeightFields('inProductSelect', 'inQuantity', 'inWeight', 'weightAutoHint'));
+        document.getElementById('outQuantity').addEventListener('input', () => updateQuantityWeightFields('outProductSelect', 'outQuantity', 'outWeight', 'outWeightAutoHint'));
+        document.getElementById('inWhSelect').addEventListener('change', updateManagerFields);
+        document.getElementById('outWhSelect').addEventListener('change', updateManagerFields);
+        document.getElementById('productSearchCode').addEventListener('input', (e) => { currentProductFilter.code = e.target.value; renderProductTable(); });
+        document.getElementById('productSearchSupplier').addEventListener('input', (e) => { currentProductFilter.supplier = e.target.value; renderProductTable(); });
+        document.getElementById('clearProductFilter').addEventListener('click', () => { document.getElementById('productSearchCode').value = ''; document.getElementById('productSearchSupplier').value = ''; currentProductFilter = { code: '', supplier: '' }; renderProductTable(); });
+        window.onclick = (e) => { if (e.target === document.getElementById('productModal')) closeProductModal(); if (e.target === document.getElementById('transactionModal')) closeTransactionModal(); };
+        setupNav();
+        renderAll();
+    }
+</script>
+</body>
+</html>
